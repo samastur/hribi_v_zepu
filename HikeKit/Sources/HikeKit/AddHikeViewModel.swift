@@ -48,7 +48,10 @@ public final class AddHikeViewModel: ObservableObject {
         state = .downloading(.fetchingPage)
         do {
             let result = try await downloader.download(from: url) { [weak self] progress in
-                Task { @MainActor in self?.state = .downloading(progress) }
+                Task { @MainActor in
+                    // Late-scheduled progress must not clobber a terminal success/failure state.
+                    if let self, self.state.isDownloading { self.state = .downloading(progress) }
+                }
             }
             try store.save(stagingDirectory: result.stagingDirectory, slug: result.hike.slug)
             state = .success(result.hike.title)
