@@ -39,9 +39,66 @@ public struct HikeParser {
             title: title,
             metadata: try parseMetadata(doc),
             coordinate: try parseCoordinate(doc),
-            sections: [],
-            imageURLs: []
+            sections: try parseSections(doc),
+            imageURLs: try parseImageURLs(doc)
         )
+    }
+
+    /// Bold-labelled blocks that are site chrome, not hike content.
+    private static let skippedSectionPrefixes = ["Za objavo komentarja", "Diskusija o izletu"]
+
+    private func parseSections(_ doc: Document) throws -> [HikeSection] {
+        var sections: [HikeSection] = []
+        for div in try doc.select("div[style*=padding-top:10px]").array() {
+            guard let first = div.children().first(), first.tagName() == "b" else { continue }
+            let title = try first.text().trimmingCharacters(in: CharacterSet(charactersIn: ": \u{00a0}"))
+            guard !title.isEmpty,
+                  !Self.skippedSectionPrefixes.contains(where: { title.hasPrefix($0) })
+            else { continue }
+            try first.remove()
+            let paragraphs = try Self.paragraphs(fromInnerHTML: div.html())
+            guard !paragraphs.isEmpty else { continue }
+            sections.append(HikeSection(title: title, paragraphs: paragraphs))
+        }
+        sections.append(contentsOf: try parseComments(doc))
+        return sections
+    }
+
+    /// Splits an HTML fragment into plain-text paragraphs at <br> boundaries.
+    static func paragraphs(fromInnerHTML html: String) throws -> [String] {
+        let marked = html.replacingOccurrences(
+            of: #"<br\s*/?>"#, with: "\u{2029}", options: [.regularExpression, .caseInsensitive])
+        let text = try SwiftSoup.parse(marked).text()
+        return text
+            .split(separator: "\u{2029}")
+            .map { $0.trimmingCharacters(in: CharacterSet.whitespaces.union(CharacterSet(charactersIn: "\u{00a0}"))) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func parseComments(_ doc: Document) throws -> [HikeSection] {
+        var paragraphs: [String] = []
+        for block in try doc.select("div.vrk0, div.vrk1").array() {
+            var author = "", date = "", text = ""
+            if let a = try block.select("a.ime").first() { author = try a.text() }
+            if let d = try block.select("span.komDatum").first() { date = try d.text() }
+            if let t = try block.select("td.komS").first() { text = try t.text() }
+            guard !text.isEmpty else { continue }
+            paragraphs.append("\(author) (\(date)): \(text)")
+        }
+        return paragraphs.isEmpty ? [] : [HikeSection(title: "Komentarji", paragraphs: paragraphs)]
+    }
+
+    private func parseImageURLs(_ doc: Document) throws -> [URL] {
+        var urls: [URL] = []
+        for img in try doc.select("img.slikagm").array() {
+            var src = try img.attr("src")
+            if src.hasPrefix("//") { src = "https:" + src }
+            src = src
+                .replacingOccurrences(of: ".th.jpg", with: ".jpg")
+                .replacingOccurrences(of: " ", with: "%20")
+            if let url = URL(string: src) { urls.append(url) }
+        }
+        return urls
     }
 
     private func parseMetadata(_ doc: Document) throws -> [MetadataField] {

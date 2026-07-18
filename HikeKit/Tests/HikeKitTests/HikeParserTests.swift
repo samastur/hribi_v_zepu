@@ -56,3 +56,46 @@ final class HikeParserTests: XCTestCase {
         }
     }
 }
+
+final class HikeParserContentTests: XCTestCase {
+    let parser = HikeParser()
+
+    func testParsesSectionsInOrder() throws {
+        let parsed = try parser.parse(html: try fixture("zadnjica"), sourceURL: zadnjicaURL)
+        let titles = parsed.sections.map(\.title)
+        XCTAssertEqual(Array(titles.prefix(2)), ["Dostop do izhodišča", "Opis poti"])
+        XCTAssertTrue(titles.contains("Ob poti"))
+        XCTAssertTrue(titles.contains("Izlet lahko podaljšamo do naslednjih ciljev"))
+        // login prompt is not a section
+        XCTAssertFalse(titles.contains { $0.hasPrefix("Za objavo komentarja") })
+        // section content is real text
+        let opis = parsed.sections.first { $0.title == "Opis poti" }!
+        XCTAssertTrue(opis.paragraphs.joined().contains("parkirišča"))
+        XCTAssertGreaterThan(opis.paragraphs.count, 1, "multi-<br> description should split into paragraphs")
+    }
+
+    func testMissingSectionsJustAbsent() throws {
+        let parsed = try parser.parse(html: try fixture("komarna_vas"), sourceURL: komarnaURL)
+        let titles = parsed.sections.map(\.title)
+        XCTAssertTrue(titles.contains("Opis poti"))
+        XCTAssertFalse(titles.contains("Ob poti"))
+    }
+
+    func testParsesComments() throws {
+        let parsed = try parser.parse(html: try fixture("zadnjica"), sourceURL: zadnjicaURL)
+        let comments = parsed.sections.last!
+        XCTAssertEqual(comments.title, "Komentarji")
+        XCTAssertGreaterThan(comments.paragraphs.count, 50) // page reports 179 comments
+        XCTAssertTrue(comments.paragraphs.contains { $0.contains("kozorogi") }) // known 2006 comment
+    }
+
+    func testParsesFullSizeImageURLs() throws {
+        let parsed = try parser.parse(html: try fixture("zadnjica"), sourceURL: zadnjicaURL)
+        XCTAssertGreaterThanOrEqual(parsed.imageURLs.count, 40) // 43 at fixture time
+        for url in parsed.imageURLs {
+            XCTAssertEqual(url.scheme, "https")
+            XCTAssertFalse(url.absoluteString.contains(".th."), "must be full-size, got \(url)")
+            XCTAssertFalse(url.absoluteString.contains(" "), "spaces must be percent-encoded")
+        }
+    }
+}
