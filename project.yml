@@ -1,0 +1,29 @@
+name: HribiVZepu
+options:
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  HikeKit:
+    path: HikeKit
+targets:
+  HribiVZepu:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: HikeKit
+    entitlements:
+      path: App/HribiVZepu.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.markos.hribivzepu
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Hribi v žepu
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
