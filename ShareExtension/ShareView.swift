@@ -7,6 +7,7 @@ struct ShareView: View {
     let onFinish: () -> Void
     @StateObject private var viewModel = AddHikeViewModel(
         store: HikeStore(baseDirectory: HikeStore.defaultDirectory()))
+    @State private var downloadTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -33,9 +34,14 @@ struct ShareView: View {
             .navigationTitle("Hribi v žepu")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                Button(viewModel.state.isDownloading ? "Cancel" : "Done") { onFinish() }
+                Button(viewModel.state.isDownloading ? "Cancel" : "Done") {
+                    downloadTask?.cancel()
+                    onFinish()
+                }
             }
-            .task { await run() }
+            .onAppear {
+                downloadTask = Task { await run() }
+            }
         }
     }
 
