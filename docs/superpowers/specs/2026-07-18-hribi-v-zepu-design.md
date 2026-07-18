@@ -95,6 +95,9 @@ Text keeps basic formatting (paragraphs, emphasis, links) rendered natively.
 
 ## Testing
 
+All automated tests run on the **local iOS simulator** via `xcodebuild test` (the iOS simulator runtime must be downloaded during project setup — Xcode 26.6 is installed but currently has no simulator runtimes). **Definition of done: the full suite passes in the simulator.**
+
 - **Parser unit tests** against saved fixture HTML: the Zadnjica–Pogačnikov dom page plus 1–2 structurally different hikes (easy valley walk, via ferrata) to catch layout variation. This is the fragile part — the parser is coupled to hribi.net's markup; a site redesign breaks new downloads (not saved hikes) until the parser is updated, and `page.html` backups allow offline re-parsing after a fix.
 - **HikeStore unit tests:** atomic save, delete, size calculation, duplicate detection.
-- **Manual on-device verification:** share extension flow, Google Maps handoff, offline reading (airplane mode).
+- **Live end-to-end test (in simulator):** downloads a real hike from hribi.net through the full `HikeDownloader` → `HikeParser` → `HikeStore` pipeline and asserts the result — title parsed, expected sections present, coordinates parsed, all images downloaded and non-empty, size accounting correct. This test hits the network by design (it validates against the live site); it fails if hribi.net is unreachable, which is acceptable for a personal project.
+- **Manual on-device verification** (the parts automation can't cover well): share extension flow, Google Maps handoff, offline reading (airplane mode).
