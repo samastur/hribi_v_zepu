@@ -28,4 +28,10 @@ final class HikeURLTests: XCTestCase {
         XCTAssertEqual(HikeURL.slug(from: url), "zadnjica_pogacnikov_dom_na_kriskih_podih")
         XCTAssertNil(HikeURL.slug(from: URL(string: "https://www.hribi.net/gora/x/1")!))
     }
+
+    func testRejectsPathTraversalSlugs() {
+        XCTAssertNil(HikeURL.validate("https://www.hribi.net/izlet/../etc/1/2/3"))
+        XCTAssertNil(HikeURL.validate("https://www.hribi.net/izlet/./x/1/2/3"))
+        XCTAssertNil(HikeURL.slug(from: URL(string: "https://www.hribi.net/izlet/%2E%2E/x/1/2")!))
+    }
 }
