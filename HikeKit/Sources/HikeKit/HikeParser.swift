@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSoup
 
-public struct ParsedHike: Equatable {
+public struct ParsedHike: Equatable, Sendable {
     public let slug: String
     public let sourceURL: URL
     public let title: String
@@ -16,7 +16,7 @@ public enum HikeParserError: Error, Equatable {
     case titleNotFound
 }
 
-public struct HikeParser {
+public struct HikeParser: Sendable {
     public init() {}
 
     /// View-count style rows that are noise offline; coordinates get structured handling.
