@@ -5,7 +5,7 @@ import HikeKit
 struct HribiVZepuApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("Hribi v žepu")
+            HikeListView(store: HikeStore(baseDirectory: HikeStore.defaultDirectory()))
         }
     }
 }
