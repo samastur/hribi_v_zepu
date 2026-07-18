@@ -12,7 +12,8 @@
 
 ## Global Constraints
 
-- Minimum iOS: **17.0**. HikeKit also builds for macOS 14 (test-only convenience).
+- Minimum iOS: **26.0** (personal app, target iPhone runs current iOS). HikeKit also builds for macOS 14 (test-only convenience).
+- **Be polite to hribi.net.** Never hit the live site in routine test or debug runs: fixtures are downloaded once and committed; the live E2E test is skipped unless `RUN_LIVE_TESTS=1` is set. Enable it only for the done-gate and deliberate fetch-behavior checks.
 - `SWIFT_VERSION = 5.0` (Swift 5 language mode) in all targets.
 - Only external dependency: **SwiftSoup** (`https://github.com/scinfu/SwiftSoup.git`, `from: "2.7.0"`), a dependency of HikeKit only.
 - Bundle IDs: app `com.markos.hribivzepu`, extension `com.markos.hribivzepu.share`. App Group: `group.com.markos.hribivzepu`.
@@ -63,7 +64,7 @@ import PackageDescription
 
 let package = Package(
     name: "HikeKit",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [.library(name: "HikeKit", targets: ["HikeKit"])],
     dependencies: [
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0")
@@ -131,7 +132,7 @@ struct HribiVZepuApp: App {
 name: HribiVZepu
 options:
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
 packages:
   HikeKit:
     path: HikeKit
@@ -429,7 +430,7 @@ git commit -m "feat: add Hike model and hribi.net URL validation"
 
 Site markup facts (verified 2026-07-18, frozen in the fixtures): metadata lines are `<div class="g2"><b>Label:</b> value</div>`; coordinates are `<span id="kf0">46,38240°N&nbsp;13,76040°E</span>` (decimal comma, `&nbsp;` separator); content sections are `<div style="padding-top:10px;"><b>Title:</b><br />text…</div>`; photos are `<img class="slikagm" src="//www.hribi.net/slike1/NAME.th.jpg">` where the full-size image URL is the same without `.th` (filenames may contain spaces); comments are `<div class="vrk0">`/`vrk1` blocks with `a.ime` (author), `span.komDatum` (date), `td.komS` (text).
 
-- [ ] **Step 1: Download and commit fixtures**
+- [ ] **Step 1: Download and commit fixtures (one-time — never re-download once committed)**
 
 ```bash
 cd HikeKit/Tests/HikeKitTests/Fixtures
@@ -1242,8 +1243,11 @@ import XCTest
 @testable import HikeKit
 
 /// Hits the live hribi.net site (spec requirement). Fails without network.
+/// Skipped unless RUN_LIVE_TESTS=1 so routine test runs never hammer hribi.net.
 final class LiveDownloadTests: XCTestCase {
     func testDownloadsRealHikeEndToEnd() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["RUN_LIVE_TESTS"] == "1",
+                          "live test disabled — set RUN_LIVE_TESTS=1 to run against hribi.net")
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("LiveE2E-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: base) }
@@ -1276,15 +1280,15 @@ final class LiveDownloadTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run it (requires network)**
+- [ ] **Step 2: Run it once, deliberately (requires network)**
 
-Run: `cd HikeKit && swift test --filter LiveDownloadTests`
-Expected: PASS in ~10–60 s depending on connection. If it fails on a specific assertion, that is a real parser/downloader bug — fix the implementation, not the test.
+Run: `cd HikeKit && RUN_LIVE_TESTS=1 swift test --filter LiveDownloadTests`
+Expected: PASS in ~10–60 s depending on connection. If it fails on a specific assertion, that is a real parser/downloader bug — fix the implementation, not the test, and only re-run the live test after the fix is confirmed against the committed fixtures.
 
-- [ ] **Step 3: Run the whole suite**
+- [ ] **Step 3: Run the whole suite (live test auto-skips)**
 
 Run: `cd HikeKit && swift test`
-Expected: PASS, all tests.
+Expected: PASS, with `LiveDownloadTests` reported as skipped — proving routine runs stay offline.
 
 - [ ] **Step 4: Commit**
 
@@ -2137,8 +2141,8 @@ Expected: at least one iPhone (e.g. "iPhone 17"). Use its exact name below as `<
 
 - [ ] **Step 2: Run the full HikeKit suite on the simulator**
 
-Run: `cd HikeKit && xcodebuild test -scheme HikeKit -destination 'platform=iOS Simulator,name=<device>'`
-Expected: `** TEST SUCCEEDED **` — all unit tests plus the live hribi.net E2E test, on iOS. This is the done-gate; do not skip or filter tests.
+Run: `cd HikeKit && TEST_RUNNER_RUN_LIVE_TESTS=1 xcodebuild test -scheme HikeKit -destination 'platform=iOS Simulator,name=<device>'`
+Expected: `** TEST SUCCEEDED **` — all unit tests plus the live hribi.net E2E test, on iOS. This is the done-gate; do not skip or filter tests. (The `TEST_RUNNER_` prefix forwards `RUN_LIVE_TESTS=1` into the test process; this is the one deliberate live hit of the gate.)
 
 - [ ] **Step 3: Build and launch the app in the simulator**
 
@@ -2165,9 +2169,10 @@ description, metadata, photos, and comments — with per-hike storage accounting
 
 - Xcode project is generated: `xcodegen generate` (config in `project.yml`).
 - All logic lives in the `HikeKit` local Swift package.
-- Fast tests during development: `cd HikeKit && swift test` (runs on macOS).
-- The done-gate: `cd HikeKit && xcodebuild test -scheme HikeKit -destination 'platform=iOS Simulator,name=<device>'`
-  — includes a live end-to-end test that downloads a real hike from hribi.net (needs network).
+- Fast tests during development: `cd HikeKit && swift test` (runs on macOS, fixtures only — never touches hribi.net).
+- The done-gate: `cd HikeKit && TEST_RUNNER_RUN_LIVE_TESTS=1 xcodebuild test -scheme HikeKit -destination 'platform=iOS Simulator,name=<device>'`
+  — includes a live end-to-end test that downloads a real hike from hribi.net (needs network;
+  gated behind `RUN_LIVE_TESTS=1` to avoid hammering the site).
 
 ## Installing on your iPhone
 
