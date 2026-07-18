@@ -21,6 +21,8 @@ struct HikeDetailView: View {
         _refreshModel = StateObject(wrappedValue: model)
     }
 
+    private static let hiddenSectionTitles: Set<String> = ["Priporočamo"]
+
     private var hike: Hike { stored.hike }
 
     private var pagerItems: [PagerItem] {
@@ -46,7 +48,7 @@ struct HikeDetailView: View {
                     }
                 }
             }
-            ForEach(hike.sections, id: \.title) { section in
+            ForEach(hike.sections.filter { !Self.hiddenSectionTitles.contains($0.title) }, id: \.title) { section in
                 Section {
                     DisclosureGroup(
                         section.title,
