@@ -16,13 +16,21 @@ final class StubFetcher: DataFetching, @unchecked Sendable {
 }
 
 final class HikeDownloaderTests: XCTestCase {
-    func makeStub() throws -> (StubFetcher, [URL]) {
+    func makeStub(registerPhotoPages: Bool = false) throws -> (StubFetcher, [URL]) {
         let stub = StubFetcher()
         let html = try fixture("komarna_vas") // smallest fixture, 28 images
         stub.responses[komarnaURL] = Data(html.utf8)
-        let imageURLs = try HikeParser().parse(html: html, sourceURL: komarnaURL).imageURLs
-        for url in imageURLs { stub.responses[url] = Data("jpegbytes".utf8) }
-        return (stub, imageURLs)
+        let parsed = try HikeParser().parse(html: html, sourceURL: komarnaURL)
+        for url in parsed.imageURLs { stub.responses[url] = Data("jpegbytes".utf8) }
+        if registerPhotoPages {
+            let photoPageData = Data(try fixture("slika_pot_213004").utf8)
+            for image in parsed.images {
+                if let photoPageURL = image.photoPageURL {
+                    stub.responses[photoPageURL] = photoPageData
+                }
+            }
+        }
+        return (stub, parsed.imageURLs)
     }
 
     func testDownloadsPageAndAllImagesIntoStaging() async throws {
@@ -84,6 +92,28 @@ final class HikeDownloaderTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? HikeDownloaderError, .invalidHikeURL)
         }
+    }
+
+    func testCaptionsDownloadedWhenPhotoPagesRegistered() async throws {
+        let (stub, _) = try makeStub(registerPhotoPages: true)
+        let result = try await HikeDownloader(fetcher: stub).download(from: komarnaURL)
+        XCTAssertFalse(result.hike.images.isEmpty)
+        for image in result.hike.images {
+            XCTAssertEqual(image.caption, "Pot se vrne v gozd.", "each image should have a caption from its photo page")
+        }
+        try? FileManager.default.removeItem(at: result.stagingDirectory)
+    }
+
+    func testCaptionsNilWhenPhotoPagesNotRegistered() async throws {
+        let (stub, imageURLs) = try makeStub(registerPhotoPages: false)
+        let result = try await HikeDownloader(fetcher: stub).download(from: komarnaURL)
+        // images still downloaded (count unchanged)
+        XCTAssertEqual(result.hike.images.count, imageURLs.count)
+        // but captions are nil since photo pages are not available
+        for image in result.hike.images {
+            XCTAssertNil(image.caption, "caption should be nil when photo page is unavailable")
+        }
+        try? FileManager.default.removeItem(at: result.stagingDirectory)
     }
 }
 

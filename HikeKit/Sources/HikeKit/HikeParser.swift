@@ -1,6 +1,15 @@
 import Foundation
 import SwiftSoup
 
+public struct ParsedImage: Equatable, Sendable {
+    public let imageURL: URL
+    public let photoPageURL: URL?
+    public init(imageURL: URL, photoPageURL: URL?) {
+        self.imageURL = imageURL
+        self.photoPageURL = photoPageURL
+    }
+}
+
 public struct ParsedHike: Equatable, Sendable {
     public let slug: String
     public let sourceURL: URL
@@ -8,7 +17,9 @@ public struct ParsedHike: Equatable, Sendable {
     public let metadata: [MetadataField]
     public let coordinate: Coordinate?
     public let sections: [HikeSection]
-    public let imageURLs: [URL]
+    public let images: [ParsedImage]
+
+    public var imageURLs: [URL] { images.map(\.imageURL) }
 }
 
 public enum HikeParserError: Error, Equatable {
@@ -40,7 +51,7 @@ public struct HikeParser: Sendable {
             metadata: try parseMetadata(doc),
             coordinate: try parseCoordinate(doc),
             sections: try parseSections(doc),
-            imageURLs: try parseImageURLs(doc)
+            images: try parseImages(doc)
         )
     }
 
@@ -88,17 +99,35 @@ public struct HikeParser: Sendable {
         return paragraphs.isEmpty ? [] : [HikeSection(title: "Komentarji", paragraphs: paragraphs)]
     }
 
-    private func parseImageURLs(_ doc: Document) throws -> [URL] {
-        var urls: [URL] = []
+    private func parseImages(_ doc: Document) throws -> [ParsedImage] {
+        var images: [ParsedImage] = []
         for img in try doc.select("img.slikagm").array() {
             var src = try img.attr("src")
             if src.hasPrefix("//") { src = "https:" + src }
             src = src
                 .replacingOccurrences(of: ".th.jpg", with: ".jpg")
                 .replacingOccurrences(of: " ", with: "%20")
-            if let url = URL(string: src) { urls.append(url) }
+            guard let imageURL = URL(string: src) else { continue }
+            var photoPageURL: URL? = nil
+            if let anchor = img.parent(), anchor.tagName() == "a" {
+                let href = try anchor.attr("href")
+                if !href.isEmpty {
+                    photoPageURL = URL(string: "https://www.hribi.net" + href)
+                }
+            }
+            images.append(ParsedImage(imageURL: imageURL, photoPageURL: photoPageURL))
         }
-        return urls
+        return images
+    }
+
+    /// Extracts the photo caption from a photo page HTML string (div.slikaspodaj > div[style*=float:left]).
+    public func caption(fromPhotoPage html: String) -> String? {
+        guard let doc = try? SwiftSoup.parse(html),
+              let container = try? doc.select("div.slikaspodaj").first(),
+              let floatLeft = try? container.select("div[style*=float:left]").first()
+        else { return nil }
+        let text = (try? floatLeft.text().trimmingCharacters(in: .whitespacesAndNewlines)) ?? ""
+        return text.isEmpty ? nil : text
     }
 
     private func parseMetadata(_ doc: Document) throws -> [MetadataField] {

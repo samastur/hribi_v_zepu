@@ -23,8 +23,14 @@ struct HikeDetailView: View {
 
     private var hike: Hike { stored.hike }
 
-    private var imageFileURLs: [URL] {
-        hike.images.map { store.imageFileURL(slug: hike.slug, filename: $0.filename) }
+    private var pagerItems: [PagerItem] {
+        hike.images.enumerated().map { index, image in
+            PagerItem(
+                id: index,
+                fileURL: store.imageFileURL(slug: hike.slug, filename: image.filename),
+                caption: image.caption
+            )
+        }
     }
 
     var body: some View {
@@ -64,7 +70,7 @@ struct HikeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarMenu }
         .fullScreenCover(item: $fullscreenIndex) { index in
-            PhotoPagerView(imageFileURLs: imageFileURLs, startIndex: index) {
+            PhotoPagerView(items: pagerItems, startIndex: index) {
                 fullscreenIndex = nil
             }
         }
@@ -104,12 +110,12 @@ struct HikeDetailView: View {
     private var photosSection: some View {
         Section("Slike (\(hike.images.count))") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 4)], spacing: 4) {
-                ForEach(Array(imageFileURLs.enumerated()), id: \.offset) { index, fileURL in
-                    LocalImage(fileURL: fileURL, contentMode: .fill)
+                ForEach(pagerItems) { item in
+                    LocalImage(fileURL: item.fileURL, contentMode: .fill)
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 100, maxHeight: 100)
                         .clipped()
                         .contentShape(Rectangle())
-                        .onTapGesture { fullscreenIndex = index }
+                        .onTapGesture { fullscreenIndex = item.id }
                 }
             }
             .padding(.vertical, 4)

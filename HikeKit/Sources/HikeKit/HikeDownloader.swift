@@ -67,12 +67,19 @@ public final class HikeDownloader: Sendable {
 
             var images: [HikeImage] = []
             let total = parsed.imageURLs.count
-            for (index, remoteURL) in parsed.imageURLs.enumerated() {
+            for (index, parsedImage) in parsed.images.enumerated() {
+                let remoteURL = parsedImage.imageURL
                 progress(.downloadingImage(index: index + 1, total: total))
                 guard let data = try? await fetcher.data(from: remoteURL), !data.isEmpty else { continue }
                 let filename = String(format: "%03d.jpg", index + 1)
                 try data.write(to: imagesDir.appendingPathComponent(filename))
-                images.append(HikeImage(filename: filename, remoteURL: remoteURL))
+                var caption: String? = nil
+                if let photoPageURL = parsedImage.photoPageURL,
+                   let pageData = try? await fetcher.data(from: photoPageURL),
+                   let pageHTML = String(data: pageData, encoding: .utf8) {
+                    caption = parser.caption(fromPhotoPage: pageHTML)
+                }
+                images.append(HikeImage(filename: filename, remoteURL: remoteURL, caption: caption))
             }
 
             let hike = Hike(

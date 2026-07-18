@@ -1,13 +1,19 @@
 import SwiftUI
 
+struct PagerItem: Identifiable {
+    let id: Int
+    let fileURL: URL
+    let caption: String?
+}
+
 struct PhotoPagerView: View {
-    let imageFileURLs: [URL]
+    let items: [PagerItem]
     let startIndex: Int
     let onClose: () -> Void
     @State private var index: Int
 
-    init(imageFileURLs: [URL], startIndex: Int, onClose: @escaping () -> Void) {
-        self.imageFileURLs = imageFileURLs
+    init(items: [PagerItem], startIndex: Int, onClose: @escaping () -> Void) {
+        self.items = items
         self.startIndex = startIndex
         self.onClose = onClose
         _index = State(initialValue: startIndex)
@@ -17,14 +23,14 @@ struct PhotoPagerView: View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
             TabView(selection: $index) {
-                ForEach(Array(imageFileURLs.enumerated()), id: \.offset) { i, fileURL in
-                    ZoomableImage(fileURL: fileURL).tag(i)
+                ForEach(items) { item in
+                    ZoomableImage(fileURL: item.fileURL).tag(item.id)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             VStack {
                 HStack {
-                    Text("\(index + 1) / \(imageFileURLs.count)")
+                    Text("\(index + 1) / \(items.count)")
                         .foregroundStyle(.white)
                         .padding(.leading)
                     Spacer()
@@ -36,6 +42,14 @@ struct PhotoPagerView: View {
                     .padding(.trailing)
                 }
                 Spacer()
+                if let caption = items.first(where: { $0.id == index })?.caption, !caption.isEmpty {
+                    Text(caption)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(.black.opacity(0.55))
+                }
             }
         }
     }

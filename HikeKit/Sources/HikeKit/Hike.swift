@@ -30,9 +30,11 @@ public struct HikeSection: Codable, Equatable, Sendable {
 public struct HikeImage: Codable, Equatable, Sendable {
     public let filename: String
     public let remoteURL: URL
-    public init(filename: String, remoteURL: URL) {
+    public let caption: String?
+    public init(filename: String, remoteURL: URL, caption: String? = nil) {
         self.filename = filename
         self.remoteURL = remoteURL
+        self.caption = caption
     }
 }
 

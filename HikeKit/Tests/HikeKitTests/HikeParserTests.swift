@@ -98,4 +98,27 @@ final class HikeParserContentTests: XCTestCase {
             XCTAssertFalse(url.absoluteString.contains(" "), "spaces must be percent-encoded")
         }
     }
+
+    func testParsesImagesWithPhotoPageURLs() throws {
+        let parsed = try parser.parse(html: try fixture("zadnjica"), sourceURL: zadnjicaURL)
+        XCTAssertGreaterThanOrEqual(parsed.images.count, 40)
+        for image in parsed.images {
+            XCTAssertNotNil(image.photoPageURL, "each image should have a photoPageURL")
+        }
+        XCTAssertEqual(
+            parsed.images.first?.photoPageURL?.absoluteString,
+            "https://www.hribi.net/slika_pot/zadnjica_pogacnikov_dom_na_kriskih_podih/212987"
+        )
+    }
+
+    func testCaptionFromPhotoPageFixture() throws {
+        let html = try fixture("slika_pot_213004")
+        let caption = parser.caption(fromPhotoPage: html)
+        XCTAssertEqual(caption, "Pot se vrne v gozd.")
+    }
+
+    func testCaptionFromPhotoPageMissing() {
+        let caption = parser.caption(fromPhotoPage: "<html><body><p>no caption here</p></body></html>")
+        XCTAssertNil(caption)
+    }
 }
