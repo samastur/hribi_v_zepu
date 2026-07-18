@@ -70,6 +70,9 @@ final class HikeStoreTests: XCTestCase {
         let stored = try store.load(slug: "same")
         XCTAssertEqual(stored.hike.dateAdded, Date(timeIntervalSince1970: 9_999))
         XCTAssertEqual(store.listHikes().count, 1)
+        let imageURL = store.imageFileURL(slug: "same", filename: "001.jpg")
+        let imageSize = (try? imageURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+        XCTAssertEqual(imageSize, 5000, "old hike content must be fully replaced")
     }
 
     func testTotalSize() throws {
@@ -86,5 +89,16 @@ final class HikeStoreTests: XCTestCase {
         try FileManager.default.createDirectory(at: corrupt, withIntermediateDirectories: true)
         try Data("not json".utf8).write(to: corrupt.appendingPathComponent("hike.json"))
         XCTAssertEqual(store.listHikes().map { $0.hike.slug }, ["good"])
+    }
+
+    func testSaveRejectsStagingWithoutManifest() throws {
+        let staging = FileManager.default.temporaryDirectory
+            .appendingPathComponent("staging-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try store.save(stagingDirectory: staging, slug: "broken")) {
+            XCTAssertEqual($0 as? HikeStoreError, .missingManifest("broken"))
+        }
+        XCTAssertFalse(store.contains(slug: "broken"))
+        try? FileManager.default.removeItem(at: staging)
     }
 }

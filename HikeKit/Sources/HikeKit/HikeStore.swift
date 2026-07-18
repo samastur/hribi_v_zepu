@@ -63,14 +63,18 @@ public final class HikeStore {
     }
 
     public func listHikes() -> [StoredHike] {
-        let subdirs = (try? fm.contentsOfDirectory(at: baseDirectory, includingPropertiesForKeys: nil)) ?? []
+        let subdirs = (try? fm.contentsOfDirectory(at: baseDirectory, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
         return subdirs
+            .filter { $0.hasDirectoryPath }
             .compactMap { try? load(slug: $0.lastPathComponent) }
             .sorted { $0.hike.dateAdded > $1.hike.dateAdded }
     }
 
     /// Atomically installs a fully-staged hike folder; replaces any existing version.
     public func save(stagingDirectory: URL, slug: String) throws {
+        guard fm.fileExists(atPath: stagingDirectory.appendingPathComponent("hike.json").path) else {
+            throw HikeStoreError.missingManifest(slug)
+        }
         let dest = directory(for: slug)
         if fm.fileExists(atPath: dest.path) {
             _ = try fm.replaceItemAt(dest, withItemAt: stagingDirectory)
