@@ -41,6 +41,9 @@ struct AddHikeView: View {
             .onAppear {
                 viewModel.prefillFromClipboard(UIPasteboard.general.string)
             }
+            .onDisappear {
+                downloadTask?.cancel()
+            }
             .onChange(of: viewModel.state) { _, state in
                 if case .success = state { didAdd = true }
             }

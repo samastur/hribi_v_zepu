@@ -42,6 +42,9 @@ struct PhotoPagerView: View {
                     .padding(.trailing)
                 }
                 Spacer()
+            }
+            VStack {
+                Spacer()
                 if let caption = items.first(where: { $0.id == index })?.caption, !caption.isEmpty {
                     Text(caption)
                         .foregroundStyle(.white)
@@ -49,6 +52,7 @@ struct PhotoPagerView: View {
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(.black.opacity(0.55))
+                        .padding(.bottom, 24)
                 }
             }
         }
