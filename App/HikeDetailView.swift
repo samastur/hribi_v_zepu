@@ -105,15 +105,11 @@ struct HikeDetailView: View {
         Section("Slike (\(hike.images.count))") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 4)], spacing: 4) {
                 ForEach(Array(imageFileURLs.enumerated()), id: \.offset) { index, fileURL in
-                    if let image = UIImage(contentsOfFile: fileURL.path) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 100, maxHeight: 100)
-                            .clipped()
-                            .contentShape(Rectangle())
-                            .onTapGesture { fullscreenIndex = index }
-                    }
+                    LocalImage(fileURL: fileURL, contentMode: .fill)
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 100, maxHeight: 100)
+                        .clipped()
+                        .contentShape(Rectangle())
+                        .onTapGesture { fullscreenIndex = index }
                 }
             }
             .padding(.vertical, 4)

@@ -45,21 +45,30 @@ struct PhotoPagerView: View {
 struct ZoomableImage: View {
     let fileURL: URL
     @State private var scale: CGFloat = 1
+    @State private var image: UIImage?
 
     var body: some View {
-        if let image = UIImage(contentsOfFile: fileURL.path) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .scaleEffect(scale)
-                .gesture(
-                    MagnificationGesture()
-                        .onChanged { scale = max(1, $0) }
-                        .onEnded { _ in withAnimation(.spring) { scale = 1 } }
-                )
-        } else {
-            Image(systemName: "photo")
-                .foregroundStyle(.gray)
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(scale)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { scale = max(1, $0) }
+                            .onEnded { _ in withAnimation(.spring) { scale = 1 } }
+                    )
+            } else {
+                Image(systemName: "photo")
+                    .foregroundStyle(.gray)
+            }
+        }
+        .task(id: fileURL) {
+            let path = fileURL.path
+            image = await Task.detached(priority: .userInitiated) {
+                UIImage(contentsOfFile: path)
+            }.value
         }
     }
 }
