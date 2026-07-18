@@ -12,6 +12,7 @@ targets:
     sources: [App]
     dependencies:
       - package: HikeKit
+      - target: ShareExtension
     entitlements:
       path: App/HribiVZepu.entitlements
       properties:
@@ -25,5 +26,31 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources: [ShareExtension]
+    dependencies:
+      - package: HikeKit
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.markos.hribivzepu
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Hribi v žepu
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu.share
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
