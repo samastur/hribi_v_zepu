@@ -63,6 +63,20 @@ struct ShareView: View {
             let item = try? await provider.loadItem(forTypeIdentifier: UTType.url.identifier)
             if let url = item as? URL { return url }
         }
+        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+            let item = try? await provider.loadItem(forTypeIdentifier: UTType.plainText.identifier)
+            let text: String?
+            if let s = item as? String {
+                text = s
+            } else if let data = item as? Data {
+                text = String(data: data, encoding: .utf8)
+            } else {
+                text = nil
+            }
+            if let text, let url = HikeURL.extractHikeURL(fromText: text) {
+                return url
+            }
+        }
         return nil
     }
 }

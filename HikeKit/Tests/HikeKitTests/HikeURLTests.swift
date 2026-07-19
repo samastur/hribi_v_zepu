@@ -34,4 +34,25 @@ final class HikeURLTests: XCTestCase {
         XCTAssertNil(HikeURL.validate("https://www.hribi.net/izlet/./x/1/2/3"))
         XCTAssertNil(HikeURL.slug(from: URL(string: "https://www.hribi.net/izlet/%2E%2E/x/1/2")!))
     }
+
+    // MARK: - extractHikeURL(fromText:)
+
+    func testExtractHikeURLFromPlainURLString() {
+        let result = HikeURL.extractHikeURL(fromText: "https://www.hribi.net/izlet/zadnjica_pogacnikov_dom_na_kriskih_podih/1/164/268")
+        XCTAssertEqual(result?.absoluteString, "https://www.hribi.net/izlet/zadnjica_pogacnikov_dom_na_kriskih_podih/1/164/268")
+    }
+
+    func testExtractHikeURLFromSurroundingText() {
+        let text = "Zadnjica - opis izleta https://www.hribi.net/izlet/zadnjica_pogacnikov_dom_na_kriskih_podih/1/164/268"
+        let result = HikeURL.extractHikeURL(fromText: text)
+        XCTAssertEqual(result?.absoluteString, "https://www.hribi.net/izlet/zadnjica_pogacnikov_dom_na_kriskih_podih/1/164/268")
+    }
+
+    func testExtractHikeURLReturnsNilForNoLinks() {
+        XCTAssertNil(HikeURL.extractHikeURL(fromText: "no links here"))
+    }
+
+    func testExtractHikeURLReturnsNilForNonHikeURL() {
+        XCTAssertNil(HikeURL.extractHikeURL(fromText: "https://example.com/izlet/x/1/2"))
+    }
 }

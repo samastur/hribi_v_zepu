@@ -22,6 +22,12 @@ public enum HikeURL {
         return components.url
     }
 
+    /// Scans free text for the first token that is a valid hribi.net hike URL and returns it normalized.
+    public static func extractHikeURL(fromText text: String) -> URL? {
+        let tokens = text.components(separatedBy: .whitespacesAndNewlines)
+        return tokens.lazy.compactMap { validate($0) }.first
+    }
+
     /// Extracts the hike slug (the path segment after "izlet").
     public static func slug(from url: URL) -> String? {
         let parts = url.path.split(separator: "/").map(String.init)

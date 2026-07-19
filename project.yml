@@ -50,6 +50,7 @@ targets:
           NSExtensionAttributes:
             NSExtensionActivationRule:
               NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu.share
