@@ -34,9 +34,10 @@ struct PhotoPagerView: View {
                 }
                 .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.paging)
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
             .scrollIndicators(.hidden)
             .scrollPosition(id: $index)
+            .ignoresSafeArea(.container, edges: .horizontal)
             .onChange(of: index) { _, newValue in
                 if let newValue { displayIndex = newValue }
             }
