@@ -10,7 +10,7 @@ struct PhotoPagerView: View {
     let items: [PagerItem]
     let startIndex: Int
     let onClose: () -> Void
-    @State private var index: Int
+    @State private var index: Int?
 
     init(items: [PagerItem], startIndex: Int, onClose: @escaping () -> Void) {
         self.items = items
@@ -22,15 +22,22 @@ struct PhotoPagerView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
-            TabView(selection: $index) {
-                ForEach(items) { item in
-                    ZoomableImage(fileURL: item.fileURL).tag(item.id)
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(items) { item in
+                        ZoomableImage(fileURL: item.fileURL)
+                            .containerRelativeFrame(.horizontal)
+                            .frame(maxHeight: .infinity)
+                    }
                 }
+                .scrollTargetLayout()
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .scrollTargetBehavior(.paging)
+            .scrollIndicators(.hidden)
+            .scrollPosition(id: $index)
             VStack {
                 HStack {
-                    Text("\(index + 1) / \(items.count)")
+                    Text("\((index ?? 0) + 1) / \(items.count)")
                         .foregroundStyle(.white)
                         .padding(.leading)
                     Spacer()
@@ -45,7 +52,7 @@ struct PhotoPagerView: View {
             }
             VStack {
                 Spacer()
-                if let caption = items.first(where: { $0.id == index })?.caption, !caption.isEmpty {
+                if let caption = items.first(where: { $0.id == (index ?? 0) })?.caption, !caption.isEmpty {
                     Text(caption)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
