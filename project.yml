@@ -2,6 +2,10 @@ name: HribiVZepu
 options:
   deploymentTarget:
     iOS: "26.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: 1
 packages:
   HikeKit:
     path: HikeKit
@@ -22,6 +26,8 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Hribi v žepu
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
     settings:
       base:
@@ -44,6 +50,8 @@ targets:
       path: ShareExtension/Info.plist
       properties:
         CFBundleDisplayName: Hribi v žepu
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController

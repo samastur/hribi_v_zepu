@@ -53,6 +53,24 @@ its own storage.
 4. Free-account caveat: the install expires after 7 days — reconnect and Run again.
    Your saved hikes survive reinstalls.
 
+## TestFlight refresh (with a paid developer account)
+
+Version and build numbers are defined once in `project.yml` (`MARKETING_VERSION`,
+`CURRENT_PROJECT_VERSION`); both targets inherit them, which the App Store Connect
+uploader requires. TestFlight builds expire after 90 days, so roughly quarterly:
+
+1. `./scripts/bump-build.sh` — increments the build number and regenerates the project.
+   No code changes needed; the version string can stay `1.0` forever.
+2. Commit the `project.yml` change.
+3. In Xcode: select **Any iOS Device (arm64)** as destination → **Product → Archive** →
+   **Distribute App → TestFlight & App Store** (or "TestFlight Internal Only") → Upload.
+4. Internal testers get the update automatically in the TestFlight app — no review,
+   and the 90-day clock restarts.
+
+One-time setup for a new tester (e.g. family member with their own Apple ID):
+App Store Connect → Users and Access → add them (any role) → in the app's TestFlight
+tab, add them to an internal testing group. They install via the TestFlight app.
+
 ## Adding a hike
 
 - In Safari, open a hike on hribi.net → Share → **Hribi v žepu**, or
