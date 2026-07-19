@@ -11,12 +11,14 @@ struct PhotoPagerView: View {
     let startIndex: Int
     let onClose: () -> Void
     @State private var index: Int?
+    @State private var displayIndex: Int
 
     init(items: [PagerItem], startIndex: Int, onClose: @escaping () -> Void) {
         self.items = items
         self.startIndex = startIndex
         self.onClose = onClose
         _index = State(initialValue: startIndex)
+        _displayIndex = State(initialValue: startIndex)
     }
 
     var body: some View {
@@ -35,9 +37,12 @@ struct PhotoPagerView: View {
             .scrollTargetBehavior(.paging)
             .scrollIndicators(.hidden)
             .scrollPosition(id: $index)
+            .onChange(of: index) { _, newValue in
+                if let newValue { displayIndex = newValue }
+            }
             VStack {
                 HStack {
-                    Text("\((index ?? 0) + 1) / \(items.count)")
+                    Text("\(displayIndex + 1) / \(items.count)")
                         .foregroundStyle(.white)
                         .padding(.leading)
                     Spacer()
@@ -52,7 +57,7 @@ struct PhotoPagerView: View {
             }
             VStack {
                 Spacer()
-                if let caption = items.first(where: { $0.id == (index ?? 0) })?.caption, !caption.isEmpty {
+                if let caption = items.first(where: { $0.id == displayIndex })?.caption, !caption.isEmpty {
                     Text(caption)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)

@@ -55,4 +55,9 @@ final class HikeURLTests: XCTestCase {
     func testExtractHikeURLReturnsNilForNonHikeURL() {
         XCTAssertNil(HikeURL.extractHikeURL(fromText: "https://example.com/izlet/x/1/2"))
     }
+
+    func testExtractsURLWithTrailingPunctuation() {
+        let url = HikeURL.extractHikeURL(fromText: "poglej: https://www.hribi.net/izlet/komarna_vas_gace_/1/899/2354.")
+        XCTAssertEqual(url?.absoluteString, "https://www.hribi.net/izlet/komarna_vas_gace_/1/899/2354")
+    }
 }
