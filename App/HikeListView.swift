@@ -7,6 +7,17 @@ struct HikeListView: View {
     @State private var showingAdd = false
     @State private var pendingDelete: StoredHike?
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("sortKey") private var sortKeyRaw = HikeSortKey.dateAdded.rawValue
+    @AppStorage("sortAscending") private var sortAscending = false
+    @State private var filter = HikeFilter()
+    @State private var showingFilters = false
+
+    private var sortKey: HikeSortKey { HikeSortKey(rawValue: sortKeyRaw) ?? .dateAdded }
+
+    private var displayedHikes: [StoredHike] {
+        HikeListModel.arrange(hikes, sort: sortKey, ascending: sortAscending,
+                              filter: filter, driveSeconds: { _ in nil })
+    }
 
     var body: some View {
         NavigationStack {
@@ -22,7 +33,24 @@ struct HikeListView: View {
             }
             .navigationTitle("Hribi v žepu")
             .toolbar {
-                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    sortMenu
+                    Button {
+                        showingFilters = true
+                    } label: {
+                        Image(systemName: filter.isActive
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              : "line.3.horizontal.decrease.circle")
+                    }
+                    Button { showingAdd = true } label: { Image(systemName: "plus") }
+                }
+            }
+            .sheet(isPresented: $showingFilters) {
+                FilterSheetView(walkingBounds: HikeListModel.walkingBounds(hikes),
+                                elevationBounds: HikeListModel.elevationBounds(hikes),
+                                difficulties: HikeListModel.difficultiesPresent(hikes),
+                                filter: $filter)
+                    .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showingAdd, onDismiss: reload) {
                 AddHikeView(store: store)
@@ -48,7 +76,7 @@ struct HikeListView: View {
 
     private var hikeList: some View {
         List {
-            ForEach(hikes) { stored in
+            ForEach(displayedHikes) { stored in
                 NavigationLink {
                     HikeDetailView(store: store, initial: stored, onChange: reload)
                 } label: {
@@ -56,13 +84,36 @@ struct HikeListView: View {
                 }
             }
             .onDelete { indexSet in
-                pendingDelete = indexSet.first.map { hikes[$0] }
+                pendingDelete = indexSet.first.map { displayedHikes[$0] }
             }
             Section {
                 Text("Total: \(ByteCountFormatter.string(fromByteCount: store.totalSizeBytes(), countStyle: .file))")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(HikeSortKey.allCases, id: \.self) { key in
+                Button {
+                    if sortKey == key {
+                        sortAscending.toggle()
+                    } else {
+                        sortKeyRaw = key.rawValue
+                        sortAscending = key != .dateAdded  // dates default newest-first
+                    }
+                } label: {
+                    if sortKey == key {
+                        Label(key.label, systemImage: sortAscending ? "chevron.up" : "chevron.down")
+                    } else {
+                        Text(key.label)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
         }
     }
 
