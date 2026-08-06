@@ -137,13 +137,14 @@ struct HikeListView: View {
     }
 
     private var locationMenu: some View {
-        Menu {
+        let activeID = locationStore.activeLocation?.id
+        return Menu {
             ForEach(locationStore.locations) { location in
                 Button {
                     locationStore.setActive(id: location.id)
                     refreshTravelTimes()
                 } label: {
-                    if location.name == activeLocationName {
+                    if location.id == activeID {
                         Label(location.name, systemImage: "checkmark")
                     } else {
                         Text(location.name)
@@ -177,6 +178,10 @@ struct HikeListView: View {
         fillTask = Task {
             let service = TravelTimeService(estimator: MapKitRouteEstimator(), store: travelTimeStore)
             await service.fill(hikes: pending, location: active) { slug, entry in
+                // MKDirections doesn't observe Swift cancellation, so a stale fetch from a
+                // location we've since switched away from can still complete here — guard
+                // against it contaminating the now-active location's in-memory drive times.
+                guard locationStore.activeLocation?.id == active.id else { return }
                 driveTimes[slug] = entry.driveSeconds
             }
         }
