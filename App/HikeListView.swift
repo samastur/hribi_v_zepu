@@ -3,6 +3,8 @@ import HikeKit
 
 struct HikeListView: View {
     let store: HikeStore
+    let locationStore: LocationStore
+    let travelTimeStore: TravelTimeStore
     @State private var hikes: [StoredHike] = []
     @State private var showingAdd = false
     @State private var pendingDelete: StoredHike?
@@ -11,12 +13,16 @@ struct HikeListView: View {
     @AppStorage("sortAscending") private var sortAscending = false
     @State private var filter = HikeFilter()
     @State private var showingFilters = false
+    @State private var driveTimes: [String: Int] = [:]
+    @State private var activeLocationName: String?
+    @State private var showingLocations = false
+    @State private var fillTask: Task<Void, Never>?
 
     private var sortKey: HikeSortKey { HikeSortKey(rawValue: sortKeyRaw) ?? .dateAdded }
 
     private var displayedHikes: [StoredHike] {
         HikeListModel.arrange(hikes, sort: sortKey, ascending: sortAscending,
-                              filter: filter, driveSeconds: { _ in nil })
+                              filter: filter, driveSeconds: { driveTimes[$0] })
     }
 
     var body: some View {
@@ -33,6 +39,9 @@ struct HikeListView: View {
             }
             .navigationTitle("Hribi v žepu")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    locationMenu
+                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     sortMenu
                     Button {
@@ -55,6 +64,11 @@ struct HikeListView: View {
             .sheet(isPresented: $showingAdd, onDismiss: reload) {
                 AddHikeView(store: store)
             }
+            .sheet(isPresented: $showingLocations, onDismiss: refreshTravelTimes) {
+                LocationsView(locationStore: locationStore,
+                              travelTimeStore: travelTimeStore,
+                              onChange: refreshTravelTimes)
+            }
             .confirmationDialog(
                 "Delete \u{201C}\(pendingDelete?.hike.title ?? "")\u{201D}?",
                 isPresented: Binding(get: { pendingDelete != nil },
@@ -62,7 +76,10 @@ struct HikeListView: View {
                 titleVisibility: .visible
             ) {
                 Button("Delete", role: .destructive) {
-                    if let target = pendingDelete { try? store.delete(slug: target.hike.slug) }
+                    if let target = pendingDelete {
+                        try? store.delete(slug: target.hike.slug)
+                        travelTimeStore.purgeHike(slug: target.hike.slug)
+                    }
                     pendingDelete = nil
                     reload()
                 }
@@ -80,7 +97,9 @@ struct HikeListView: View {
                 NavigationLink {
                     HikeDetailView(store: store, initial: stored, onChange: reload)
                 } label: {
-                    HikeRow(stored: stored, driveText: nil)
+                    HikeRow(stored: stored,
+                            driveText: driveTimes[stored.hike.slug]
+                                .map { HikeListModel.driveTimeText(seconds: $0) })
                 }
             }
             .onDelete { indexSet in
@@ -117,7 +136,51 @@ struct HikeListView: View {
         }
     }
 
-    private func reload() { hikes = store.listHikes() }
+    private var locationMenu: some View {
+        Menu {
+            ForEach(locationStore.locations) { location in
+                Button {
+                    locationStore.setActive(id: location.id)
+                    refreshTravelTimes()
+                } label: {
+                    if location.name == activeLocationName {
+                        Label(location.name, systemImage: "checkmark")
+                    } else {
+                        Text(location.name)
+                    }
+                }
+            }
+            Divider()
+            Button("Uredi lokacije…") { showingLocations = true }
+        } label: {
+            Label(activeLocationName ?? "Lokacije", systemImage: "house")
+        }
+    }
+
+    private func reload() {
+        hikes = store.listHikes()
+        refreshTravelTimes()
+    }
+
+    /// Loads cached times for the active location and fetches any missing ones.
+    /// Cancels an in-flight fill first so switching locations mid-fill is safe.
+    private func refreshTravelTimes() {
+        fillTask?.cancel()
+        guard let active = locationStore.activeLocation else {
+            activeLocationName = nil
+            driveTimes = [:]
+            return
+        }
+        activeLocationName = active.name
+        driveTimes = travelTimeStore.driveSeconds(for: active.id)
+        let pending = hikes.map(\.hike)
+        fillTask = Task {
+            let service = TravelTimeService(estimator: MapKitRouteEstimator(), store: travelTimeStore)
+            await service.fill(hikes: pending, location: active) { slug, entry in
+                driveTimes[slug] = entry.driveSeconds
+            }
+        }
+    }
 }
 
 struct HikeRow: View {
