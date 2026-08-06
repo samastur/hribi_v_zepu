@@ -20,6 +20,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Lokacija se uporabi samo za shranjevanje trenutnega mesta kot izhodišča za izračun časa vožnje do izletov.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

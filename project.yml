@@ -29,6 +29,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
+        NSLocationWhenInUseUsageDescription: Lokacija se uporabi samo za shranjevanje trenutnega mesta kot izhodišča za izračun časa vožnje do izletov.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu
