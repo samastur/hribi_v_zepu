@@ -93,17 +93,24 @@ struct HikeListView: View {
 
     private var hikeList: some View {
         List {
-            ForEach(displayedHikes) { stored in
-                NavigationLink {
-                    HikeDetailView(store: store, initial: stored, onChange: reload)
-                } label: {
-                    HikeRow(stored: stored,
-                            driveText: driveTimes[stored.hike.slug]
-                                .map { HikeListModel.driveTimeText(seconds: $0) })
+            if displayedHikes.isEmpty {
+                ContentUnavailableView(
+                    "Ni zadetkov",
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    description: Text("Poskusi prilagoditi filtre."))
+            } else {
+                ForEach(displayedHikes) { stored in
+                    NavigationLink {
+                        HikeDetailView(store: store, initial: stored, onChange: reload)
+                    } label: {
+                        HikeRow(stored: stored,
+                                driveText: driveTimes[stored.hike.slug]
+                                    .map { HikeListModel.driveTimeText(seconds: $0) })
+                    }
                 }
-            }
-            .onDelete { indexSet in
-                pendingDelete = indexSet.first.map { displayedHikes[$0] }
+                .onDelete { indexSet in
+                    pendingDelete = indexSet.first.map { displayedHikes[$0] }
+                }
             }
             Section {
                 Text("Total: \(ByteCountFormatter.string(fromByteCount: store.totalSizeBytes(), countStyle: .file))")

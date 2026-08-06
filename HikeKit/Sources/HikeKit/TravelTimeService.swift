@@ -30,6 +30,10 @@ public final class TravelTimeService {
                   store.entry(locationID: location.id, slug: hike.slug) == nil
             else { continue }
             if let seconds = try? await estimator.driveTime(from: location.coordinate, to: destination) {
+                // MKDirections doesn't observe Swift cancellation, so re-check here: a
+                // location/hike deleted while this await was in flight must not be
+                // re-persisted after its purge, which would orphan a bucket in the store.
+                guard !Task.isCancelled else { return }
                 let entry = TravelTimeEntry(driveSeconds: Int(seconds), fetchedAt: Date())
                 store.set(entry, locationID: location.id, slug: hike.slug)
                 onEntry?(hike.slug, entry)

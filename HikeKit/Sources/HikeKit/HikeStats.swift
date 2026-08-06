@@ -52,11 +52,12 @@ public extension Hike {
 
     static func difficultyRank(from text: String?) -> Int? {
         guard let text = text?.lowercased() else { return nil }
-        let typeRanks = ["označena pot": 0, "brezpotje": 1, "plezalna pot": 2]
+        let typeRanks: [(key: String, rank: Int)] =
+            [("označena pot", 0), ("brezpotje", 1), ("plezalna pot", 2)]
         // Order matters: "zelo zahtevn" must be tested before "zahtevn".
         let severityRanks: [(prefix: String, rank: Int)] =
             [("zelo zahtevn", 2), ("zahtevn", 1), ("lahk", 0)]
-        guard let type = typeRanks.first(where: { text.contains($0.key) })?.value,
+        guard let type = typeRanks.first(where: { text.contains($0.key) })?.rank,
               let severity = severityRanks.first(where: { text.hasPrefix($0.prefix) })?.rank
         else { return nil }
         return type * 3 + severity

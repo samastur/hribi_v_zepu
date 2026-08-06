@@ -70,15 +70,19 @@ struct RangeFilterSection: View {
                 get: { Double(current.lowerBound) },
                 set: { newValue in
                     let lower = min(Int(newValue), current.upperBound)
-                    selection = lower...current.upperBound
+                    let range = lower...current.upperBound
+                    selection = range == bounds ? nil : range
                 }), in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: 1)
+                .accessibilityLabel("\(title) — od")
             LabeledContent("Do", value: format(current.upperBound))
             Slider(value: Binding(
                 get: { Double(current.upperBound) },
                 set: { newValue in
                     let upper = max(Int(newValue), current.lowerBound)
-                    selection = current.lowerBound...upper
+                    let range = current.lowerBound...upper
+                    selection = range == bounds ? nil : range
                 }), in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: 1)
+                .accessibilityLabel("\(title) — do")
         }
     }
 }

@@ -15,6 +15,17 @@ final class FakeEstimator: RouteEstimator, @unchecked Sendable {
     }
 }
 
+/// Cancels a task handed to it from inside driveTime, before returning — simulates
+/// MKDirections completing after the surrounding Task was cancelled mid-fetch.
+final class CancelingEstimator: RouteEstimator, @unchecked Sendable {
+    var taskToCancel: Task<Void, Never>?
+
+    func driveTime(from: Coordinate, to: Coordinate) async throws -> TimeInterval {
+        taskToCancel?.cancel()
+        return 60
+    }
+}
+
 @MainActor
 final class TravelTimeServiceTests: XCTestCase {
     var fileURL: URL!
@@ -93,5 +104,23 @@ final class TravelTimeServiceTests: XCTestCase {
         _ = await task.value
 
         XCTAssertEqual(estimator.requestedSlugsByCoordinate.count, 0)
+    }
+
+    /// MKDirections doesn't observe Swift cancellation: driveTime can still return a
+    /// result after the surrounding Task was cancelled. fill() must re-check
+    /// cancellation before persisting, or a deleted hike/location can be re-written
+    /// after its purge, orphaning a bucket in the store.
+    func testCancellationAfterAwaitPreventsPersisting() async {
+        let hikes = [makeHike(slug: "a", latitude: 46.1)]
+        let cancelingEstimator = CancelingEstimator()
+        let cancelingService = TravelTimeService(estimator: cancelingEstimator, store: store, spacing: .zero)
+
+        let task = Task {
+            await cancelingService.fill(hikes: hikes, location: self.location, onEntry: nil)
+        }
+        cancelingEstimator.taskToCancel = task
+        _ = await task.value
+
+        XCTAssertNil(store.entry(locationID: location.id, slug: "a"))
     }
 }
