@@ -81,4 +81,17 @@ final class TravelTimeServiceTests: XCTestCase {
         }
         XCTAssertEqual(received, ["a"])
     }
+
+    func testCancellationStopsFillingEarly() async {
+        let hikes = [makeHike(slug: "a", latitude: 46.1),
+                     makeHike(slug: "b", latitude: 46.2)]
+
+        let task = Task {
+            await self.service.fill(hikes: hikes, location: self.location, onEntry: nil)
+        }
+        task.cancel()
+        _ = await task.value
+
+        XCTAssertEqual(estimator.requestedSlugsByCoordinate.count, 0)
+    }
 }
