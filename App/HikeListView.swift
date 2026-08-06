@@ -52,7 +52,7 @@ struct HikeListView: View {
                 NavigationLink {
                     HikeDetailView(store: store, initial: stored, onChange: reload)
                 } label: {
-                    HikeRow(stored: stored)
+                    HikeRow(stored: stored, driveText: nil)
                 }
             }
             .onDelete { indexSet in
@@ -71,25 +71,42 @@ struct HikeListView: View {
 
 struct HikeRow: View {
     let stored: StoredHike
-
-    private var statLine: String {
-        [stored.hike.metadataValue("Čas hoje"),
-         stored.hike.metadataValue("Zahtevnost"),
-         stored.hike.metadataValue("Višinska razlika")]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-    }
+    let driveText: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(stored.hike.title).font(.headline)
-            if !statLine.isEmpty {
-                Text(statLine).font(.subheadline).foregroundStyle(.secondary)
+            if let stats = statLine {
+                stats.font(.subheadline)
             }
             Text(ByteCountFormatter.string(fromByteCount: stored.sizeBytes, countStyle: .file))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
+    }
+
+    /// One Text so the stats wrap as a single line of colored segments.
+    private var statLine: Text? {
+        let hike = stored.hike
+        var parts: [Text] = []
+        if let walk = hike.metadataValue("Čas hoje") {
+            parts.append(Text(walk).foregroundStyle(Color.statWalking))
+        }
+        if let difficulty = hike.difficultyText {
+            parts.append(Text(difficulty).foregroundStyle(Color.statDifficulty))
+        }
+        if let elevation = hike.metadataValue("Višinska razlika po poti") {
+            parts.append(Text(elevation).foregroundStyle(Color.statElevation))
+        }
+        if let driveText {
+            parts.append(Text("\(Image(systemName: "car.fill")) \(driveText)")
+                .foregroundStyle(Color.statDrive))
+        }
+        guard let first = parts.first else { return nil }
+        let separator = Text(" · ").foregroundStyle(.secondary)
+        return parts.dropFirst().reduce(first) { accumulated, part in
+            Text("\(accumulated)\(separator)\(part)")
+        }
     }
 }
