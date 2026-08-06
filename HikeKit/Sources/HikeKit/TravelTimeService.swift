@@ -50,13 +50,23 @@ public struct MapKitRouteEstimator: RouteEstimator {
 
     public func driveTime(from: Coordinate, to: Coordinate) async throws -> TimeInterval {
         let request = MKDirections.Request()
-        request.source = MKMapItem(placemark: MKPlacemark(coordinate:
-            CLLocationCoordinate2D(latitude: from.latitude, longitude: from.longitude)))
-        request.destination = MKMapItem(placemark: MKPlacemark(coordinate:
-            CLLocationCoordinate2D(latitude: to.latitude, longitude: to.longitude)))
+        request.source = Self.mapItem(for: from)
+        request.destination = Self.mapItem(for: to)
         request.transportType = .automobile
         let response = try await MKDirections(request: request).calculate()
         guard let route = response.routes.first else { throw NoRouteFound() }
         return route.expectedTravelTime
+    }
+
+    /// MKMapItem(location:address:) needs iOS 26 / macOS 26; the package still
+    /// targets macOS 14 so `swift test` runs there, hence the MKPlacemark path.
+    private static func mapItem(for coordinate: Coordinate) -> MKMapItem {
+        #if os(iOS)
+        return MKMapItem(location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+                         address: nil)
+        #else
+        return MKMapItem(placemark: MKPlacemark(coordinate:
+            CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)))
+        #endif
     }
 }
