@@ -28,6 +28,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
+        # HTTPS only, which is exempt; saves the export compliance question per build.
+        ITSAppUsesNonExemptEncryption: false
         # App Store Connect rejects a bundle without these.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
