@@ -64,3 +64,12 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: net.gaivo.HribiVZepu.Share
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
+schemes:
+  HribiVZepu:
+    build:
+      targets:
+        HribiVZepu: all
+    run:
+      config: Debug
+    archive:
+      config: Release
