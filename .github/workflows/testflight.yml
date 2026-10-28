@@ -1,0 +1,53 @@
+name: TestFlight
+
+# A TestFlight build expires after 90 days, so a fresh one is uploaded
+# from main every month, whether or not anyone is around to do it.
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # To keep this workflow enabled; see the last step.
+  actions: write
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+
+jobs:
+  upload:
+    name: Upload a build to TestFlight
+    # Forks without their own Apple account settings skip it.
+    if: vars.DEVELOPMENT_TEAM != ''
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: main
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Write signing settings and the API key
+        env:
+          TEAM: ${{ vars.DEVELOPMENT_TEAM }}
+          ASC_KEY: ${{ secrets.ASC_KEY }}
+        run: |
+          printf 'DEVELOPMENT_TEAM = %s\n' "$TEAM" > Config/Local.xcconfig
+          printf '%s\n' "$ASC_KEY" > "$RUNNER_TEMP/asc-key.p8"
+      - run: scripts/testflight
+        env:
+          ASC_KEY_PATH: ${{ runner.temp }}/asc-key.p8
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      # GitHub silently disables scheduled workflows in a public
+      # repository after 60 days without activity; enabling it again
+      # restarts that count.
+      - name: Keep the schedule alive
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable testflight.yml --repo "$GITHUB_REPOSITORY"

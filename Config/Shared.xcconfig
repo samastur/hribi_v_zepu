@@ -1,0 +1,7 @@
+// Settings for every target. Local.xcconfig (gitignored) adds your team.
+
+MARKETING_VERSION = 1.0
+// scripts/testflight overrides this with the UTC time of the build.
+CURRENT_PROJECT_VERSION = 1
+
+#include? "Local.xcconfig"

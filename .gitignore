@@ -3,4 +3,7 @@
 HikeKit/.build/
 HikeKit/.swiftpm/
 DerivedData/
+.build/
 .superpowers/
+# Personal signing settings; see Config/Local.xcconfig.example
+Config/Local.xcconfig

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Archives the app and uploads it to App Store Connect for TestFlight.
+# Signs with the team in Config/Local.xcconfig, as the Apple account
+# signed in to Xcode or, when ASC_KEY_PATH, ASC_KEY_ID and ASC_ISSUER_ID
+# are set, an App Store Connect API key.
+set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root"
+if [[ ! -f Config/Local.xcconfig ]]; then
+  echo "Config/Local.xcconfig is missing; see Config/Local.xcconfig.example" >&2
+  exit 1
+fi
+xcodegen generate --quiet
+setting() {
+  xcodebuild -showBuildSettings -project HribiVZepu.xcodeproj \
+    -target HribiVZepu -configuration Release 2>/dev/null |
+    awk -v k="$1" '$1 == k { print $3 }'
+}
+team=$(setting DEVELOPMENT_TEAM)
+if [[ -z "$team" ]]; then
+  echo "DEVELOPMENT_TEAM is not set; see Config/Local.xcconfig.example" >&2
+  exit 1
+fi
+auth=()
+if [[ -n "${ASC_KEY_PATH:-}" ]]; then
+  auth=(-authenticationKeyPath "$ASC_KEY_PATH"
+    -authenticationKeyID "$ASC_KEY_ID"
+    -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+fi
+# Every upload needs a build number higher than the last; a UTC time
+# always is, with no counter to keep.
+build=$(date -u +%Y%m%d%H%M)
+out="$root/.build/testflight/$build"
+mkdir -p "$out"
+cat > "$out/ExportOptions.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>$team</string>
+</dict>
+</plist>
+PLIST
+# Signing an archive needs a development certificate, which a fresh CI
+# runner has not got, so the archive is built unsigned and the export
+# signs it with Apple's cloud-managed distribution certificate. The
+# export keeps the entitlements the archive was signed with, so each
+# bundle is first signed locally with its own; that signature needs no
+# certificate.
+xcodebuild archive -project HribiVZepu.xcodeproj -scheme HribiVZepu \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -archivePath "$out/HribiVZepu.xcarchive" CODE_SIGNING_ALLOWED=NO \
+  CURRENT_PROJECT_VERSION="$build" -quiet
+app="$out/HribiVZepu.xcarchive/Products/Applications/HribiVZepu.app"
+sign() {
+  if grep -q '[$](' "$2"; then
+    echo "$2 uses a build setting this script does not fill in" >&2
+    exit 1
+  fi
+  codesign --force --sign - --entitlements "$2" "$1"
+}
+sign "$app/PlugIns/ShareExtension.appex" ShareExtension/ShareExtension.entitlements
+sign "$app" App/HribiVZepu.entitlements
+xcodebuild -exportArchive -archivePath "$out/HribiVZepu.xcarchive" \
+  -exportOptionsPlist "$out/ExportOptions.plist" -exportPath "$out" \
+  -allowProvisioningUpdates ${auth[@]+"${auth[@]}"}
+echo "Uploaded build $build; it appears in TestFlight once processed."

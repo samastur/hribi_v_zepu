@@ -2,10 +2,9 @@ name: HribiVZepu
 options:
   deploymentTarget:
     iOS: "26.0"
-settings:
-  base:
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: 1
+configFiles:
+  Debug: Config/Shared.xcconfig
+  Release: Config/Shared.xcconfig
 packages:
   HikeKit:
     path: HikeKit
@@ -21,7 +20,7 @@ targets:
       path: App/HribiVZepu.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.markos.hribivzepu
+          - group.net.gaivo.HribiVZepu
     info:
       path: App/Info.plist
       properties:
@@ -32,7 +31,7 @@ targets:
         NSLocationWhenInUseUsageDescription: Lokacija se uporabi samo za shranjevanje trenutnega mesta kot izhodišča za izračun časa vožnje do izletov.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu
+        PRODUCT_BUNDLE_IDENTIFIER: net.gaivo.HribiVZepu
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -46,7 +45,7 @@ targets:
       path: ShareExtension/ShareExtension.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.markos.hribivzepu
+          - group.net.gaivo.HribiVZepu
     info:
       path: ShareExtension/Info.plist
       properties:
@@ -62,6 +61,6 @@ targets:
               NSExtensionActivationSupportsText: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.markos.hribivzepu.share
+        PRODUCT_BUNDLE_IDENTIFIER: net.gaivo.HribiVZepu.Share
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic

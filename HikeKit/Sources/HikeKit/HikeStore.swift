@@ -20,7 +20,7 @@ public enum HikeStoreError: Error, Equatable {
 
 /// Folder-per-hike storage: <base>/<slug>/{hike.json, page.html, images/}
 public final class HikeStore {
-    public static let appGroupID = "group.com.markos.hribivzepu"
+    public static let appGroupID = "group.net.gaivo.HribiVZepu"
 
     public let baseDirectory: URL
     private let fm = FileManager.default
